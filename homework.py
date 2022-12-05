@@ -9,8 +9,7 @@ from logging.handlers import RotatingFileHandler
 import requests
 import telegram
 from dotenv import load_dotenv
-from telegram import TelegramError
-from telegram.ext import CommandHandler, Updater
+from telegram.ext import Updater
 
 load_dotenv()
 
@@ -33,7 +32,7 @@ HOMEWORK_VERDICTS = {
 
 
 def check_tokens():
-    """Проверка доступности переменных окружения. """
+    """ Проверка доступности переменных окружения. """
     return all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID])
 
 
@@ -79,6 +78,7 @@ def check_response(response):
         return {}
     return response.get('homeworks')[0]
 
+
 def parse_status(homework):
     """Информации о конкретном статусе домашней работы."""
     if 'status' not in homework or type(homework) is str:
@@ -101,7 +101,6 @@ def main():
         sys.exit(0)
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    updater = Updater(token=TELEGRAM_TOKEN)
     timestamp = 0
     while True:
         try:
