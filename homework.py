@@ -119,8 +119,8 @@ def main():
 if __name__ == '__main__':
     logging.basicConfig(
         handlers=[logging.FileHandler(
-        filename="main.log",
-        mode='w')],
+                  filename="main.log",
+                  mode='w')],
         format='%(asctime)s, %(levelname)s, %(message)s',
         level=logging.DEBUG,
     )
