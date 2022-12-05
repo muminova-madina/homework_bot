@@ -9,7 +9,6 @@ from logging.handlers import RotatingFileHandler
 import requests
 import telegram
 from dotenv import load_dotenv
-from telegram.ext import Updater
 
 load_dotenv()
 
@@ -32,7 +31,7 @@ HOMEWORK_VERDICTS = {
 
 
 def check_tokens():
-    """ Проверка доступности переменных окружения. """
+    """Проверка доступности переменных окружения."""
     return all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID])
 
 
