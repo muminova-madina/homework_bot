@@ -4,7 +4,6 @@ import os
 import sys
 import time
 from json.decoder import JSONDecodeError
-from logging.handlers import RotatingFileHandler
 
 import requests
 import telegram
@@ -18,24 +17,15 @@ from exceptions import (
 
 load_dotenv()
 
-
 logging.basicConfig(
     level=logging.DEBUG,
-    handlers=[logging.FileHandler(
-              filename='main.log',
-              mode='w')],
-    format='%(asctime)s, %(levelname)s, %(message)s',
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("debug.log"),
+        logging.StreamHandler()
+    ]
 )
-
 logger = logging.getLogger(__name__)
-logger.addHandler(logging.StreamHandler())
-handler = RotatingFileHandler(
-    'Bot.log',
-    maxBytes=50000000,
-    backupCount=5,
-    encoding='utf-8',
-)
-
 
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
@@ -77,27 +67,33 @@ def get_api_answer(current_timestamp: int) -> dict:
         response = requests.get(ENDPOINT,
                                 headers=HEADERS,
                                 params=params)
-        if response.status_code != http.HTTPStatus.OK:
-            raise WrongApiResponseCodeError(f'Ошибка {response.status_code}')
-        return response.json()
-    except requests.exceptions.ConnectionError:
-        raise ConnectionError('Ошибка подключения')
-    except requests.RequestException as request_error:
-        raise Exception(f'Ошибка запроса {request_error}')
-    except JSONDecodeError:
-        raise Exception('JSON не сформирован')
+    except requests.RequestException as error:
+        logging.error(f'Ошибка подключения к API: {error},'
+                      f' exc_info=True')
+        raise ConnectionError(f'Ошибка подключения к API: {error},'
+                              f' exc_info=True')
+
+    if response.status_code != http.HTTPStatus.OK:
+        logging.error(WrongApiResponseCodeError(response),
+                      exc_info=True)
+        raise WrongApiResponseCodeError(response)
+    try:
+        response = response.json()
+    except JSONDecodeError as error:
+        logging.error(f'Ошибка преобразования из JSON: {error}',
+                      exc_info=True)
+        raise JSONDecodeError(f'Ошибка преобразования из JSON: {error}')
+    return response
 
 
 def check_response(response: dict) -> dict:
     """Проверка ответа API."""
     if not isinstance(response, dict):
         raise TypeError('В функцию "check_response" поступил не словарь')
-    if not response.get('homeworks'):
-        raise KeyError("в запросе нет ключа с домашками")
+    if 'homeworks' not in response or 'current_date' not in response:
+        raise KeyError('в запросе нет ключа с домашками')
     if not isinstance(response['homeworks'], list):
-        raise TypeError("в значаниях словаря не список")
-    if response.get('homeworks'):
-        return response
+        raise TypeError('в значаниях словаря не список')
 
 
 def parse_status(homework: dict) -> str:
@@ -107,14 +103,12 @@ def parse_status(homework: dict) -> str:
     if not homework_name:
         raise KeyError('У домашней работы отсутствует ключ homework_name')
     if not homework_status:
-        raise EmptyAPIResponseError(f'Неизвестный статус работы:'
-                                    f' {homework_status}')
+        raise EmptyAPIResponseError('Неизвестный статус работы')
     verdict = HOMEWORK_VERDICTS.get(homework_status)
     if not verdict:
         raise EmptyAPIResponseError(f'Неожиданный статус домашней работы:,'
                                     f'{homework_status}')
-    return f'Изменился статус проверки работы "{homework_name}".' \
-           f'{verdict}'
+    return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def main():
@@ -131,6 +125,8 @@ def main():
             homework = check_response(response)
             timestamp = response.get('current_date')
             homeworks = response.get('homeworks')
+            if not response.get('homeworks'):
+                continue
             if homeworks:
                 homework = homeworks[0]
                 message = parse_status(homework)
@@ -143,7 +139,8 @@ def main():
                           exc_info=True)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
-            logger.error(message, exc_info=True)
+            send_message(bot, message)
+            logger.error(message, exc_info=error)
         finally:
             time.sleep(RETRY_PERIOD)
 
