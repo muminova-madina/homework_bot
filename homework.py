@@ -19,11 +19,12 @@ from exceptions import (
 load_dotenv()
 
 
-logging.basicConfig(level=logging.DEBUG,
-                   handlers=[logging.FileHandler(
-                   filename='main.log',
-                   mode='w')],
-                   format='%(asctime)s, %(levelname)s, %(message)s',
+logging.basicConfig(
+    level=logging.DEBUG,
+    handlers=[logging.FileHandler(
+    filename='main.log',
+    mode='w')],
+    format='%(asctime)s, %(levelname)s, %(message)s',
 )
 
 logger = logging.getLogger(__name__)
@@ -106,7 +107,8 @@ def parse_status(homework: dict) -> str:
     if not homework_name:
         raise KeyError('У домашней работы отсутствует ключ homework_name')
     if not homework_status:
-        raise EmptyAPIResponseError(f'Неизвестный статус работы: {homework_status}')
+        raise EmptyAPIResponseError(f'Неизвестный статус работы:'
+                                    f' {homework_status}')
     verdict = HOMEWORK_VERDICTS.get(homework_status)
     if not verdict:
         raise EmptyAPIResponseError(f'Неожиданный статус домашней работы:,'
