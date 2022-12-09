@@ -22,8 +22,8 @@ load_dotenv()
 logging.basicConfig(
     level=logging.DEBUG,
     handlers=[logging.FileHandler(
-    filename='main.log',
-    mode='w')],
+              filename='main.log',
+              mode='w')],
     format='%(asctime)s, %(levelname)s, %(message)s',
 )
 
