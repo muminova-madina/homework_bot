@@ -12,20 +12,19 @@ from dotenv import load_dotenv
 from telegram import Bot
 
 from exceptions import (
-    ConnectionError, EmptyAPIResponseError, JSONDecodeError,
+    ConnectionError, EmptyAPIResponseError,
     WrongApiResponseCodeError, NotForTelegramError,
 )
 
 load_dotenv()
 
 
-logging.basicConfig(
-        level=logging.DEBUG,
-        handlers=[logging.FileHandler(
-                  filename='main.log',
-                  mode='w')],
-        format='%(asctime)s, %(levelname)s, %(message)s',
-    )
+logging.basicConfig(level=logging.DEBUG,
+                   handlers=[logging.FileHandler(
+                   filename='main.log',
+                   mode='w')],
+                   format='%(asctime)s, %(levelname)s, %(message)s',
+)
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler())
@@ -65,14 +64,13 @@ def send_message(bot: Bot, message: str) -> None:
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
     except telegram.error.TelegramError:
-        logging.error(f'Ошибка отправки сообщения в Telegram')
+        logging.error('Ошибка отправки сообщения в Telegram')
     else:
         logging.debug(f'Сообщение успешно отправленно: {message}')
 
 
 def get_api_answer(current_timestamp: int) -> dict:
     """Запрос к эндпоинту API-сервиса."""
-    timestamp = current_timestamp
     params = {'from_date': current_timestamp}
     try:
         response = requests.get(ENDPOINT,
@@ -111,8 +109,11 @@ def parse_status(homework: dict) -> str:
         raise EmptyAPIResponseError(f'Неизвестный статус работы: {homework_status}')
     verdict = HOMEWORK_VERDICTS.get(homework_status)
     if not verdict:
-        raise EmptyAPIResponseError(f'Неожиданный статус домашней работы:,{homework_status}')
-    return f'Изменился статус проверки работы "{homework_name}". {verdict}'
+        raise EmptyAPIResponseError(f'Неожиданный статус домашней работы:,'
+                                    f'{homework_status}')
+    return f'Изменился статус проверки работы "{homework_name}".' \
+           f'{verdict}'
+
 
 def main():
     """Основная логика работы бота."""
@@ -136,7 +137,8 @@ def main():
             else:
                 logger.debug('Новых статусов нет')
         except NotForTelegramError as err:
-            logging.error(f'Что то сломалось при отправке, {err}', exc_info=True)
+            logging.error(f'Что то сломалось при отправке, {err}',
+                          exc_info=True)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logger.error(message, exc_info=True)
