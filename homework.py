@@ -22,7 +22,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
         logging.FileHandler("debug.log"),
-        logging.StreamHandler()
+        logging.StreamHandler(sys.stdout)
     ]
 )
 logger = logging.getLogger(__name__)
@@ -67,23 +67,21 @@ def get_api_answer(current_timestamp: int) -> dict:
         response = requests.get(ENDPOINT,
                                 headers=HEADERS,
                                 params=params)
-    except requests.RequestException as error:
-        logging.error(f'Ошибка подключения к API: {error},'
-                      f' exc_info=True')
-        raise ConnectionError(f'Ошибка подключения к API: {error},'
-                              f' exc_info=True')
-
-    if response.status_code != http.HTTPStatus.OK:
-        logging.error(WrongApiResponseCodeError(response),
-                      exc_info=True)
-        raise WrongApiResponseCodeError(response)
-    try:
-        response = response.json()
+        if response.status_code != http.HTTPStatus.OK:
+            raise WrongApiResponseCodeError(response)
+        return response.json()
+    except requests.exceptions.ConnectionError:
+        error_api_msg = (
+            f'Эндпоинт {ENDPOINT},'
+            f'headers {HEADERS},'
+            f'params {params},'
+            f'пришел код ответа API: {response.status_code}'
+        )
+        raise ConnectionError(error_api_msg)
+    except requests.RequestException as request_error:
+        raise Exception(f'Ошибка запроса {request_error}')
     except JSONDecodeError as error:
-        logging.error(f'Ошибка преобразования из JSON: {error}',
-                      exc_info=True)
         raise JSONDecodeError(f'Ошибка преобразования из JSON: {error}')
-    return response
 
 
 def check_response(response: dict) -> dict:
@@ -106,8 +104,7 @@ def parse_status(homework: dict) -> str:
         raise EmptyAPIResponseError('Неизвестный статус работы')
     verdict = HOMEWORK_VERDICTS.get(homework_status)
     if not verdict:
-        raise EmptyAPIResponseError(f'Неожиданный статус домашней работы:,'
-                                    f'{homework_status}')
+        raise EmptyAPIResponseError('Неожиданный статус домашней работы')
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
@@ -122,11 +119,9 @@ def main():
     while True:
         try:
             response = get_api_answer(timestamp)
-            homework = check_response(response)
+            check_response(response)
             timestamp = response.get('current_date')
-            homeworks = response.get('homeworks')
-            if not response.get('homeworks'):
-                continue
+            homeworks = response['homeworks']
             if homeworks:
                 homework = homeworks[0]
                 message = parse_status(homework)
